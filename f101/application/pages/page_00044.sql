@@ -21,7 +21,7 @@ wwv_flow_api.create_page(
 ,p_group_id=>wwv_flow_api.id(5322694370144102)
 ,p_page_template_options=>'#DEFAULT#'
 ,p_last_updated_by=>'JTORRES'
-,p_last_upd_yyyymmddhh24miss=>'20211125105419'
+,p_last_upd_yyyymmddhh24miss=>'20220105113236'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(47519322931365576)
@@ -129,7 +129,7 @@ wwv_flow_api.create_page_plug(
 '	}',
 '	const paramsUrl = params.map(({name,value}) => `${name}=${value}`).join(''&'')',
 '',
-'	const url = `&REPORT_BASE_URL.${reportName}&standAlone=true&j_username=&REPORT_USER.&j_password=&REPORT_PASS.&output=&REPORT_FORMAT.&${paramsUrl}`',
+'	const url = `&REPORT_BASE_URL&REPORT_BASE_URL_MOD.${reportName}&standAlone=true&j_username=&REPORT_USER.&j_password=&REPORT_PASS.&output=&REPORT_FORMAT.&${paramsUrl}`',
 '    ',
 '	apex.server.process(''SET_REPORT_URL'', {',
 '	  x01: url',

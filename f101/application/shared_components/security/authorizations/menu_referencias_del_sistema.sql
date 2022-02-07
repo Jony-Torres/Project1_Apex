@@ -25,7 +25,7 @@ wwv_flow_api.create_security_scheme(
 '      select per_acceso into Vallow from acc_det_grupos ',
 '      where cod_seg_tipo = ''MENU'' and cod_segmento =(select cod_segmento ',
 '                                                     from acc_segmentos ',
-'                                                     where des_segmento = ''M_REFERENCIAS_SISTEMA'' ',
+'                                                     where des_segmento = ''M_REF_SISTEMA'' ',
 '                                                           and cod_seg_tipo = ''MENU'') ',
 '                                                           and cod_grupo =(select cod_grupo ',
 '                                                                           from funcionarios ',

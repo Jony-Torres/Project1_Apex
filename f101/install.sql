@@ -30,6 +30,8 @@ prompt --install
 @@application/shared_components/files/menu_venta4_png.sql
 @@application/shared_components/files/prueba_png.sql
 @@application/shared_components/files/prueba2_png.sql
+@@application/shared_components/files/del1_png.sql
+@@application/shared_components/files/del2_png.sql
 @@application/plugin_settings.sql
 @@application/shared_components/security/authorizations/derechos_de_administración.sql
 @@application/shared_components/security/authorizations/menu_inicio.sql
@@ -38,10 +40,17 @@ prompt --install
 @@application/shared_components/security/authorizations/boton_crear.sql
 @@application/shared_components/security/authorizations/boton_modificar.sql
 @@application/shared_components/security/authorizations/boton_eliminar.sql
+@@application/shared_components/security/authorizations/menu_stock.sql
+@@application/shared_components/security/authorizations/menu_ayuda.sql
+@@application/shared_components/security/authorizations/menu_cobros.sql
+@@application/shared_components/security/authorizations/menu_ventas.sql
+@@application/shared_components/security/authorizations/menu_pagos.sql
+@@application/shared_components/security/authorizations/menu_compras.sql
 @@application/shared_components/navigation/navigation_bar.sql
 @@application/shared_components/logic/application_processes/set_report_url.sql
 @@application/shared_components/logic/application_processes/set_report_url_descargar.sql
 @@application/shared_components/logic/application_items/report_base_url.sql
+@@application/shared_components/logic/application_items/report_base_url_mod.sql
 @@application/shared_components/logic/application_items/report_base_url_rest.sql
 @@application/shared_components/logic/application_items/report_format.sql
 @@application/shared_components/logic/application_items/report_pass.sql
@@ -51,6 +60,7 @@ prompt --install
 @@application/shared_components/logic/application_computations/report_format.sql
 @@application/shared_components/logic/application_computations/report_pass.sql
 @@application/shared_components/logic/application_computations/report_user.sql
+@@application/shared_components/logic/application_computations/report_base_url_mod.sql
 @@application/shared_components/logic/application_settings.sql
 @@application/shared_components/navigation/tabs/standard.sql
 @@application/shared_components/navigation/tabs/parent.sql
@@ -220,6 +230,8 @@ prompt --install
 @@application/pages/page_00047.sql
 @@application/pages/page_00048.sql
 @@application/pages/page_00049.sql
+@@application/pages/page_00050.sql
+@@application/pages/page_00051.sql
 @@application/pages/page_00100.sql
 @@application/pages/page_09999.sql
 @@application/deployment/definition.sql

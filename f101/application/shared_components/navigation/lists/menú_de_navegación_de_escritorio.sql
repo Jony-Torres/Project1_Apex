@@ -121,6 +121,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_link_text=>'Ayuda'
 ,p_list_item_link_target=>'f?p=&APP_ID.:3:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-question-square'
+,p_security_scheme=>wwv_flow_api.id(26830643667375327)
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 ,p_list_item_current_for_pages=>'3,45'
 );
@@ -140,6 +141,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_link_text=>'Stock'
 ,p_list_item_link_target=>'f?p=&APP_ID.:4:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-cart-plus'
+,p_security_scheme=>wwv_flow_api.id(26829355141287876)
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 ,p_list_item_current_for_pages=>'4,19,20,21,25,34,39,40'
 );
@@ -219,6 +221,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_link_text=>unistr('Gesti\00F3n Cobros')
 ,p_list_item_link_target=>'f?p=&APP_ID.:5:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-money'
+,p_security_scheme=>wwv_flow_api.id(26831767450560592)
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 ,p_list_item_current_for_pages=>'5,11,13,18,43'
 );
@@ -268,6 +271,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_link_text=>unistr('Ventas y Facturaci\00F3n')
 ,p_list_item_link_target=>'f?p=&APP_ID.:6:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-cart-arrow-up'
+,p_security_scheme=>wwv_flow_api.id(26832118210623693)
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 ,p_list_item_current_for_pages=>'6,34,36,39,41'
 );
@@ -297,6 +301,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_link_text=>unistr('Gesti\00F3n Pagos')
 ,p_list_item_link_target=>'f?p=&APP_ID.:7:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-cart-check'
+,p_security_scheme=>wwv_flow_api.id(26834390524699613)
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 ,p_list_item_current_for_pages=>'7'
 );
@@ -306,6 +311,7 @@ wwv_flow_api.create_list_item(
 ,p_list_item_link_text=>'Compras'
 ,p_list_item_link_target=>'f?p=&APP_ID.:8:&SESSION.::&DEBUG.::::'
 ,p_list_item_icon=>'fa-shopping-cart'
+,p_security_scheme=>wwv_flow_api.id(26834680312704383)
 ,p_list_item_current_type=>'COLON_DELIMITED_PAGE_LIST'
 ,p_list_item_current_for_pages=>'8,27,29,30,27'
 );

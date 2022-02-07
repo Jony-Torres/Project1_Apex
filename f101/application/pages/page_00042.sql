@@ -19,84 +19,166 @@ wwv_flow_api.create_page(
 ,p_page_mode=>'MODAL'
 ,p_step_title=>'Comprobante Venta'
 ,p_allow_duplicate_submissions=>'N'
+,p_warn_on_unsaved_changes=>'N'
 ,p_autocomplete_on_off=>'OFF'
 ,p_group_id=>wwv_flow_api.id(5322694370144102)
 ,p_javascript_code=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'var htmldb_delete_message=''"DELETE_CONFIRM_MSG"'';',
-'function recalculaImporte() {',
-'    var model = apex.region("detalle_comprobante").widget().interactiveGrid("getCurrentView").model;',
-'    var gra_det = model.getFieldKey("GRAVADA");',
-'    var iva_det = model.getFieldKey("IVA");',
-'    var tot_det = model.getFieldKey("TOTAL");',
-'    var gravada = 0;',
-'    var iva = 0;',
-'    var total = 0;',
-'    model.forEach(function(r,index,id) {',
-'        var meta = model.getRecordMetadata(id);',
-'        if ((meta.fields != undefined) && (!meta.deleted)) {',
-'           total = total + parseFloat(r[tot_det].replace('','',''.''));',
-'           gravada = gravada + parseFloat(r[gra_det].replace('','',''.''));',
-'           iva = iva + parseFloat(r[iva_det].replace('','',''.''));',
-'           //console.log(''Gravada: '' + gravada + '' Iva: '' + iva+'' Total:'' + total);',
-'        }',
-'    });',
-'    $s(''P42_GRA_COMPROBANTE'', gravada.toString().replace(''.'','',''));',
-'    $s(''P42_IVA_COMPROBANTE'', iva.toString().replace(''.'','',''));',
-'    $s(''P42_TOT_COMPROBANTE'',total.toString().replace(''.'','',''));',
-'}',
 '',
 'function comprobarLineas() {',
-'	//Accedemos al modelo de la linea del detalle',
-'	var model = apex.region("detalle_comprobante").widget().interactiveGrid("getCurrentView").model;',
-'	var contar = 0;',
-'	//Recorremos las lineas ',
-'	model.forEach(function(r,index,id) {',
-'        var meta = model.getRecordMetadata(id);',
-'        if ((meta.fields != undefined) && (!meta.deleted)) {',
-'			contar++;',
+'//Accedemos al modelo de la linea del detalle',
+'    var model = apex.region("det").widget().interactiveGrid("getCurrentView").model;',
+'    var contar = 0;',
+'    var articulo = 0;',
+'    var dup_arti = 0;',
+'    //Recorremos las lineas ',
+'    model.forEach(function(r,index,id) {',
+'    var meta = model.getRecordMetadata(id);',
+'    if ((meta.fields != undefined) && (!meta.deleted)) {',
+'        if (articulo == 0) {',
+'            articulo = model.getFieldKey("COD_ARTICULO");',
 '        }',
+'        contar++;',
+'        if ((contar > 1) && (articulo == model.getFieldKey("COD_ARTICULO"))){',
+'            dup_arti = 1;',
+'        }',
+'    }',
 '    });',
-'	if (contar == 0){',
-'		alert("Debe ingresar al menos algun registro al detalle, para confirmar la operacion");',
-'		apex.event.gCancelFlag = true;',
-'	} else{',
-'		habilitaControlesBeforeSubmit();',
-'	}',
+'    if (contar == 0){',
+'        alert("Debe ingresar al menos algun registro al detalle, para confirmar la operacion");',
+'        apex.event.gCancelFlag = true;',
+'    } else if(dup_arti == 1){',
+'        alert("Existen Articulos duplicados en el detalle,Verifique!!!");',
+'        apex.event.gCancelFlag = true;',
+'    } else{',
+'        habilitaControlesBeforeSubmit();',
+'    }',
+'};',
+'',
+'function fn_del_rec_collection(p_secuencia) {',
+'	console.log(p_secuencia);',
+'    apex.server.process(''pr_del_rec_coleccajax'',                             ',
+'                        {x01: p_secuencia',
+'                        },  ',
+'        {',
+'            success: function (pData) {             ',
+'                if (pData.success == true) {',
+'                    fn_act_reg_detalle();',
+'                    fn_cal_tot_collection();',
+'                }',
+'            },                     ',
+'        }',
+'    );',
 '};',
 '',
 'function habilitaControlesBeforeSubmit(){',
 '	$("#P42_GRA_COMPROBANTE").removeAttr("disabled");',
 '	$("#P42_IVA_COMPROBANTE").removeAttr("disabled");',
 '	$("#P42_TOT_COMPROBANTE").removeAttr("disabled");',
-'}'))
+'};',
+'',
+'function fn_add_act_collection() {',
+'    var v_articulo = apex.item( "P42_COD_ARTICULO" ).getValue();',
+'    var v_cantidad = apex.item( "P42_CANTIDAD" ).getValue();',
+'    var v_precio = apex.item( "P42_PRECIO" ).getValue();',
+'    //console.log(''Articulo: '' + v_articulo + '' Cantidad: '' + v_cantidad + '' Precio: '' + v_precio);',
+'    apex.server.process(''pr_add_act_coleccajax'',                             ',
+'                        {x01: v_articulo,',
+'                         x02: v_cantidad,',
+'                         x03: v_precio',
+'                        },  ',
+'        {',
+'            success: function (pData) {             ',
+'                //console.log(''Total Iva: '' + pData.xtotal_iva + '' Total Gravada: '' + pData.xtotal_gravada + '' Total: '' + pData.xtotal);',
+'                if (pData.success == true) {',
+'                    fn_act_reg_detalle();',
+'                    fn_lim_col_articulos();',
+'                }',
+'            },                     ',
+'        }',
+'    );',
+'};',
+'',
+'function fn_cal_tot_collection() {',
+'    //console.log(''Proc total'');',
+'    apex.server.process(''pr_cal_tot_coleccajax'',',
+'                        { },',
+'        {',
+'            success: function (pData) {             ',
+'                //console.log(''Total Iva: '' + pData.xtotal_iva + '' Total Gravada: '' + pData.xtotal_gravada + '' Total: '' + pData.xtotal);',
+'                if (pData.success == true) {',
+'                    apex.item( "P42_IVA_COMPROBANTE" ).setValue(pData.xtotal_iva);',
+'                    apex.item( "P42_GRA_COMPROBANTE" ).setValue(pData.xtotal_gravada);',
+'                    apex.item( "P42_TOT_COMPROBANTE" ).setValue(pData.xtotal);',
+'                }',
+'            },                     ',
+'        }',
+'    );',
+'};',
+'',
+'function fn_lim_col_articulos(){',
+'	apex.item( "P42_COD_ARTICULO" ).setValue(null);',
+'    apex.item( "P42_CANTIDAD" ).setValue(null);',
+'    apex.item( "P42_PRECIO" ).setValue(null);',
+'    apex.item( "P42_COD_ARTICULO" ).setFocus();',
+'};',
+'function fn_nav_articulo(){',
+'    console.log(''Prueba'');',
+'    apex.item( "P42_COD_ARTICULO" ).setFocus();',
+'};',
+'function fn_act_reg_detalle(){',
+'	var region = apex.region( "det" );',
+'    region.refresh();',
+'};'))
 ,p_step_template=>wwv_flow_api.id(20701244474036853)
 ,p_page_template_options=>'#DEFAULT#:ui-dialog--stretch'
 ,p_protection_level=>'C'
 ,p_last_updated_by=>'JTORRES'
-,p_last_upd_yyyymmddhh24miss=>'20211214155315'
+,p_last_upd_yyyymmddhh24miss=>'20220205101328'
 );
 wwv_flow_api.create_page_plug(
- p_id=>wwv_flow_api.id(30828443378212752)
-,p_plug_name=>'Detalle Comprobante'
-,p_region_name=>'detalle_comprobante'
+ p_id=>wwv_flow_api.id(23052000792158838)
+,p_plug_name=>unistr('Art\00EDculo ')
 ,p_region_template_options=>'#DEFAULT#:t-Region--scrollBody'
 ,p_plug_template=>wwv_flow_api.id(5234926163143730)
+,p_plug_display_sequence=>20
+,p_include_in_reg_disp_sel_yn=>'Y'
+,p_plug_display_point=>'BODY'
+,p_plug_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_attribute_01=>'N'
+,p_attribute_02=>'HTML'
+);
+wwv_flow_api.create_page_plug(
+ p_id=>wwv_flow_api.id(27133225802052303)
+,p_plug_name=>'detalle_comprobante'
+,p_region_name=>'det'
+,p_region_template_options=>'#DEFAULT#'
+,p_plug_template=>wwv_flow_api.id(5207526032143638)
 ,p_plug_display_sequence=>30
 ,p_include_in_reg_disp_sel_yn=>'Y'
 ,p_plug_display_point=>'BODY'
-,p_query_type=>'TABLE'
-,p_query_table=>'COM_DET_VENTAS'
-,p_query_where=>'COD_COMPROBANTE = :P42_COD_COMPROBANTE'
-,p_include_rowid_column=>false
-,p_plug_source_type=>'NATIVE_IG'
-,p_ajax_items_to_submit=>'P42_COD_COMPROBANTE'
+,p_query_type=>'SQL'
+,p_plug_source=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'SELECT  SEQ_ID,',
+'        c001 COD_ARTICULO,',
+'        n001 CANTIDAD,',
+'        n002 PRECIO,',
+'        n003 IVA,',
+'        n004 GRAVADA,',
+'        n005 TOTAL,',
+'        '''' AS DEL',
+'FROM apex_collections ',
+'WHERE collection_name = ''TMP_COM_DET_VENTAS'''))
+,p_plug_source_type=>'NATIVE_IR'
 ,p_plug_query_options=>'DERIVED_REPORT_COLUMNS'
+,p_prn_content_disposition=>'ATTACHMENT'
+,p_prn_document_header=>'APEX'
 ,p_prn_units=>'MILLIMETERS'
 ,p_prn_paper_size=>'A4'
 ,p_prn_width=>297
 ,p_prn_height=>210
 ,p_prn_orientation=>'HORIZONTAL'
-,p_prn_page_header=>'Detalle Comprobante'
+,p_prn_page_header=>'detalle_comprobante'
 ,p_prn_page_header_font_color=>'#000000'
 ,p_prn_page_header_font_family=>'Helvetica'
 ,p_prn_page_header_font_weight=>'normal'
@@ -120,474 +202,109 @@ wwv_flow_api.create_page_plug(
 ,p_prn_page_footer_alignment=>'CENTER'
 ,p_prn_border_color=>'#666666'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31459637625267616)
-,p_name=>'SECUENCIA'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'SECUENCIA'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>true
-,p_item_type=>'NATIVE_HIDDEN'
-,p_display_sequence=>50
-,p_attribute_01=>'Y'
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_is_primary_key=>true
-,p_include_in_export=>false
+wwv_flow_api.create_worksheet(
+ p_id=>wwv_flow_api.id(27459904972648123)
+,p_max_row_count=>'1000000'
+,p_show_search_bar=>'N'
+,p_show_detail_link=>'N'
+,p_owner=>'JTORRES'
+,p_internal_uid=>27459904972648123
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31459826539267617)
-,p_name=>'COD_COMPROBANTE'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'COD_COMPROBANTE'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>false
-,p_item_type=>'NATIVE_HIDDEN'
-,p_display_sequence=>60
-,p_attribute_01=>'Y'
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_is_primary_key=>false
-,p_default_type=>'ITEM'
-,p_default_expression=>'P42_COD_COMPROBANTE'
-,p_duplicate_value=>true
-,p_include_in_export=>false
+wwv_flow_api.create_worksheet_column(
+ p_id=>wwv_flow_api.id(27460075051648124)
+,p_db_column_name=>'SEQ_ID'
+,p_display_order=>10
+,p_column_identifier=>'A'
+,p_column_label=>'Seq Id'
+,p_column_type=>'NUMBER'
+,p_display_text_as=>'HIDDEN'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31459928242267618)
-,p_name=>'COD_ARTICULO'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'COD_ARTICULO'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>false
-,p_item_type=>'NATIVE_POPUP_LOV'
-,p_heading=>'Articulo'
-,p_heading_alignment=>'LEFT'
-,p_display_sequence=>70
-,p_value_alignment=>'LEFT'
-,p_attribute_01=>'POPUP'
-,p_attribute_02=>'FIRST_ROWSET'
-,p_attribute_03=>'N'
-,p_attribute_04=>'N'
-,p_attribute_05=>'N'
-,p_is_required=>true
-,p_lov_type=>'SHARED'
-,p_lov_id=>wwv_flow_api.id(23226822219468505)
-,p_lov_display_extra=>false
-,p_lov_display_null=>false
-,p_enable_filter=>true
-,p_filter_operators=>'C:S:CASE_INSENSITIVE:REGEXP'
-,p_filter_is_required=>false
-,p_filter_text_case=>'MIXED'
-,p_filter_exact_match=>true
-,p_filter_lov_type=>'LOV'
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_enable_hide=>true
-,p_is_primary_key=>false
-,p_duplicate_value=>true
-,p_include_in_export=>true
+wwv_flow_api.create_worksheet_column(
+ p_id=>wwv_flow_api.id(27460116336648125)
+,p_db_column_name=>'COD_ARTICULO'
+,p_display_order=>20
+,p_column_identifier=>'B'
+,p_column_label=>'Cod Articulo'
+,p_column_type=>'STRING'
+,p_display_text_as=>'LOV_ESCAPE_SC'
+,p_rpt_named_lov=>wwv_flow_api.id(23226822219468505)
+,p_rpt_show_filter_lov=>'1'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31460006593267619)
-,p_name=>'DES_ARTICULO'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'DES_ARTICULO'
-,p_data_type=>'VARCHAR2'
-,p_is_query_only=>false
-,p_item_type=>'NATIVE_HIDDEN'
-,p_display_sequence=>80
-,p_attribute_01=>'Y'
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>false
-,p_is_primary_key=>false
-,p_duplicate_value=>true
-,p_include_in_export=>false
+wwv_flow_api.create_worksheet_column(
+ p_id=>wwv_flow_api.id(27460216435648126)
+,p_db_column_name=>'CANTIDAD'
+,p_display_order=>30
+,p_column_identifier=>'C'
+,p_column_label=>'Cantidad'
+,p_column_type=>'NUMBER'
+,p_column_alignment=>'RIGHT'
+,p_format_mask=>'999G999G999G999G999G999G990'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31460114943267620)
-,p_name=>'CANTIDAD'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'CANTIDAD'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>false
-,p_item_type=>'PLUGIN_SI_TRTS_AUTONUMERIC'
-,p_heading=>'Cantidad'
-,p_heading_alignment=>'RIGHT'
-,p_display_sequence=>90
-,p_value_alignment=>'RIGHT'
-,p_is_required=>true
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_enable_hide=>true
-,p_is_primary_key=>false
-,p_default_type=>'STATIC'
-,p_default_expression=>'1'
-,p_duplicate_value=>true
-,p_include_in_export=>true
-,p_escape_on_http_output=>true
+wwv_flow_api.create_worksheet_column(
+ p_id=>wwv_flow_api.id(27460336804648127)
+,p_db_column_name=>'PRECIO'
+,p_display_order=>40
+,p_column_identifier=>'D'
+,p_column_label=>'Precio'
+,p_column_type=>'NUMBER'
+,p_column_alignment=>'RIGHT'
+,p_format_mask=>'999G999G999G999G999G999G990'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31460202536267621)
-,p_name=>'PRECIO'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'PRECIO'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>false
-,p_item_type=>'PLUGIN_SI_TRTS_AUTONUMERIC'
-,p_heading=>'Precio'
-,p_heading_alignment=>'RIGHT'
-,p_display_sequence=>100
-,p_value_alignment=>'RIGHT'
-,p_is_required=>true
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_enable_hide=>true
-,p_is_primary_key=>false
-,p_duplicate_value=>true
-,p_include_in_export=>true
-,p_escape_on_http_output=>true
+wwv_flow_api.create_worksheet_column(
+ p_id=>wwv_flow_api.id(27460419975648128)
+,p_db_column_name=>'IVA'
+,p_display_order=>50
+,p_column_identifier=>'E'
+,p_column_label=>'Iva'
+,p_column_type=>'NUMBER'
+,p_column_alignment=>'RIGHT'
+,p_format_mask=>'999G999G999G999G999G999G990'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31460274785267622)
-,p_name=>'DESCUENTO'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'DESCUENTO'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>false
-,p_item_type=>'NATIVE_HIDDEN'
-,p_display_sequence=>110
-,p_attribute_01=>'Y'
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_is_primary_key=>false
-,p_duplicate_value=>true
-,p_include_in_export=>false
+wwv_flow_api.create_worksheet_column(
+ p_id=>wwv_flow_api.id(27460572060648129)
+,p_db_column_name=>'GRAVADA'
+,p_display_order=>60
+,p_column_identifier=>'F'
+,p_column_label=>'Gravada'
+,p_column_type=>'NUMBER'
+,p_column_alignment=>'RIGHT'
+,p_format_mask=>'999G999G999G999G999G999G990'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31460378591267623)
-,p_name=>'IVA'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'IVA'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>false
-,p_item_type=>'PLUGIN_SI_TRTS_AUTONUMERIC'
-,p_heading=>'Iva'
-,p_heading_alignment=>'RIGHT'
-,p_display_sequence=>120
-,p_value_alignment=>'RIGHT'
-,p_value_css_classes=>'is-readonly'
-,p_is_required=>true
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_enable_hide=>true
-,p_is_primary_key=>false
-,p_duplicate_value=>true
-,p_include_in_export=>true
-,p_escape_on_http_output=>true
+wwv_flow_api.create_worksheet_column(
+ p_id=>wwv_flow_api.id(27460636181648130)
+,p_db_column_name=>'TOTAL'
+,p_display_order=>70
+,p_column_identifier=>'G'
+,p_column_label=>'Total'
+,p_column_type=>'NUMBER'
+,p_column_alignment=>'RIGHT'
+,p_format_mask=>'999G999G999G999G999G999G990'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31460525434267624)
-,p_name=>'GRAVADA'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'GRAVADA'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>false
-,p_item_type=>'PLUGIN_SI_TRTS_AUTONUMERIC'
-,p_heading=>'Gravada'
-,p_heading_alignment=>'RIGHT'
-,p_display_sequence=>130
-,p_value_alignment=>'RIGHT'
-,p_value_css_classes=>'is-readonly'
-,p_is_required=>true
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_enable_hide=>true
-,p_is_primary_key=>false
-,p_duplicate_value=>true
-,p_include_in_export=>true
-,p_escape_on_http_output=>true
+wwv_flow_api.create_worksheet_column(
+ p_id=>wwv_flow_api.id(27460737045648131)
+,p_db_column_name=>'DEL'
+,p_display_order=>80
+,p_column_identifier=>'H'
+,p_column_label=>'Suprimir'
+,p_column_html_expression=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'<a href="#" onclick="fn_del_rec_collection(#SEQ_ID#)"> ',
+'    <img src="#APP_IMAGES#del2.png	" />',
+'</a>'))
+,p_column_type=>'STRING'
+,p_column_alignment=>'CENTER'
 );
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(31460594058267625)
-,p_name=>'TOTAL'
-,p_source_type=>'DB_COLUMN'
-,p_source_expression=>'TOTAL'
-,p_data_type=>'NUMBER'
-,p_is_query_only=>false
-,p_item_type=>'PLUGIN_SI_TRTS_AUTONUMERIC'
-,p_heading=>'Total'
-,p_heading_alignment=>'RIGHT'
-,p_display_sequence=>140
-,p_value_alignment=>'RIGHT'
-,p_value_css_classes=>'is-readonly'
-,p_is_required=>true
-,p_filter_is_required=>false
-,p_use_as_row_header=>false
-,p_enable_sort_group=>true
-,p_enable_control_break=>true
-,p_enable_hide=>true
-,p_is_primary_key=>false
-,p_duplicate_value=>true
-,p_include_in_export=>false
-,p_escape_on_http_output=>true
-);
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(35569727536319810)
-,p_name=>'DEL'
-,p_source_type=>'NONE'
-,p_item_type=>'NATIVE_HTML_EXPRESSION'
-,p_heading=>'Remover'
-,p_heading_alignment=>'LEFT'
-,p_display_sequence=>40
-,p_value_alignment=>'LEFT'
-,p_attribute_01=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'<button type="button" class="a-Button a-Button--noLabel a-Button--iconTextButton js-actionButton" data-action="row-delete">',
-'<span class="fa fa-remove"></span>',
-'</button>'))
-,p_use_as_row_header=>false
-,p_enable_hide=>true
-);
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(35570195277319815)
-,p_name=>'REC'
-,p_source_type=>'NONE'
-,p_item_type=>'NATIVE_HTML_EXPRESSION'
-,p_heading=>'Agregar'
-,p_heading_alignment=>'LEFT'
-,p_display_sequence=>30
-,p_value_alignment=>'LEFT'
-,p_attribute_01=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'<button type="button" class="a-Button a-Button--noLabel a-Button--iconTextButton js-actionButton" data-action="selection-add-row">',
-'<span class="fa fa-plus-square-o"></span>',
-'</button>'))
-,p_use_as_row_header=>false
-,p_enable_hide=>true
-);
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(35570596545319819)
-,p_name=>'APEX$ROW_ACTION'
-,p_source_type=>'NONE'
-,p_item_type=>'NATIVE_HIDDEN'
-,p_display_sequence=>20
-,p_attribute_01=>'Y'
-,p_use_as_row_header=>false
-);
-wwv_flow_api.create_region_column(
- p_id=>wwv_flow_api.id(35570673202319820)
-,p_name=>'APEX$ROW_SELECTOR'
-,p_source_type=>'NONE'
-,p_item_type=>'NATIVE_HIDDEN'
-,p_display_sequence=>10
-,p_attribute_01=>'Y'
-,p_use_as_row_header=>false
-);
-wwv_flow_api.create_interactive_grid(
- p_id=>wwv_flow_api.id(31459530970267615)
-,p_internal_uid=>31459530970267615
-,p_is_editable=>true
-,p_edit_operations=>'i:u:d'
-,p_lost_update_check_type=>'VALUES'
-,p_add_row_if_empty=>true
-,p_submit_checked_rows=>false
-,p_lazy_loading=>false
-,p_requires_filter=>false
-,p_select_first_row=>true
-,p_pagination_type=>'SCROLL'
-,p_show_total_row_count=>true
-,p_show_toolbar=>true
-,p_toolbar_buttons=>null
-,p_enable_save_public_report=>false
-,p_enable_subscriptions=>true
-,p_enable_flashback=>true
-,p_define_chart_view=>true
-,p_enable_download=>true
-,p_enable_mail_download=>true
-,p_fixed_header=>'PAGE'
-,p_show_icon_view=>false
-,p_show_detail_view=>false
-,p_javascript_code=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'function(config) {',
-'    config.defaultGridViewOptions = {',
-'        footer : false',
-'    }',
-'    ',
-'    config.initActions = function(actions){',
-'        var rowDelete = actions.lookup("row-delete"),',
-'            originalDeleteAction = rowDelete.action;',
-'        ',
-'        rowDelete.action = function(_, el){',
-'            originalDeleteAction(_, el);',
-'            recalculaImporte();',
-'        };',
-'        //',
-'        var rowRevert = actions.lookup("row-revert"),',
-'            originalRevertAction = rowRevert.action;',
-'        rowRevert.action = function(_, el){',
-'            originalRevertAction(_, el);',
-'            recalculaImporte();',
-'        };',
-'        //',
-'        var rowRefresh = actions.lookup("row-refresh");',
-'           // originalRefreshAction = rowRefresh.action;',
-'        ',
-'        rowRefresh.action = function(_, el){',
-'            originalRevertAction(_, el);',
-'            recalculaImporte();',
-'        };',
-'        ',
-'    };',
-'    return config;',
-'}'))
-);
-wwv_flow_api.create_ig_report(
- p_id=>wwv_flow_api.id(31474072655388849)
-,p_interactive_grid_id=>wwv_flow_api.id(31459530970267615)
-,p_type=>'PRIMARY'
-,p_default_view=>'GRID'
-,p_show_row_number=>false
-,p_settings_area_expanded=>true
-);
-wwv_flow_api.create_ig_report_view(
- p_id=>wwv_flow_api.id(31474139666388852)
-,p_report_id=>wwv_flow_api.id(31474072655388849)
-,p_view_type=>'GRID'
-,p_stretch_columns=>true
-,p_srv_exclude_null_values=>false
-,p_srv_only_display_columns=>true
-,p_edit_mode=>false
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31474549814388860)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>1
-,p_column_id=>wwv_flow_api.id(31459637625267616)
-,p_is_visible=>true
-,p_is_frozen=>false
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31475058244388862)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>2
-,p_column_id=>wwv_flow_api.id(31459826539267617)
-,p_is_visible=>true
-,p_is_frozen=>false
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31475577005388864)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>6
-,p_column_id=>wwv_flow_api.id(31459928242267618)
-,p_is_visible=>true
-,p_is_frozen=>false
-,p_width=>330
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31476093814388865)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>4
-,p_column_id=>wwv_flow_api.id(31460006593267619)
-,p_is_visible=>true
-,p_is_frozen=>false
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31476565658388867)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>7
-,p_column_id=>wwv_flow_api.id(31460114943267620)
-,p_is_visible=>true
-,p_is_frozen=>false
-,p_width=>45
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31477119388388869)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>9
-,p_column_id=>wwv_flow_api.id(31460202536267621)
-,p_is_visible=>true
-,p_is_frozen=>false
-,p_width=>80
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31477556973388870)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>7
-,p_column_id=>wwv_flow_api.id(31460274785267622)
-,p_is_visible=>true
-,p_is_frozen=>false
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31478066055388872)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>10
-,p_column_id=>wwv_flow_api.id(31460378591267623)
-,p_is_visible=>true
-,p_is_frozen=>false
-,p_width=>70
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31478537937388874)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>11
-,p_column_id=>wwv_flow_api.id(31460525434267624)
-,p_is_visible=>true
-,p_is_frozen=>false
-,p_width=>90
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(31479059772388875)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>12
-,p_column_id=>wwv_flow_api.id(31460594058267625)
-,p_is_visible=>true
-,p_is_frozen=>false
-,p_width=>100
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(43310802462592897)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>5
-,p_column_id=>wwv_flow_api.id(35569727536319810)
-,p_is_visible=>true
-,p_is_frozen=>false
-,p_width=>10
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(43377664605559137)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>3
-,p_column_id=>wwv_flow_api.id(35570195277319815)
-,p_is_visible=>true
-,p_is_frozen=>true
-,p_width=>65
-);
-wwv_flow_api.create_ig_report_column(
- p_id=>wwv_flow_api.id(43397069710701886)
-,p_view_id=>wwv_flow_api.id(31474139666388852)
-,p_display_seq=>0
-,p_column_id=>wwv_flow_api.id(35570596545319819)
-,p_is_visible=>true
-,p_is_frozen=>false
+wwv_flow_api.create_worksheet_rpt(
+ p_id=>wwv_flow_api.id(27569225644528677)
+,p_application_user=>'APXWS_DEFAULT'
+,p_report_seq=>10
+,p_report_alias=>'275693'
+,p_status=>'PUBLIC'
+,p_is_default=>'Y'
+,p_report_columns=>'SEQ_ID:COD_ARTICULO:CANTIDAD:PRECIO:IVA:GRAVADA:TOTAL:DEL'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(31427187761203941)
-,p_plug_name=>'Comprobante Venta'
+,p_plug_name=>'Datos Comprobantes'
 ,p_region_template_options=>'#DEFAULT#'
 ,p_plug_template=>wwv_flow_api.id(5207526032143638)
 ,p_plug_display_sequence=>10
@@ -625,6 +342,33 @@ wwv_flow_api.create_page_plug(
 ,p_plug_query_options=>'DERIVED_REPORT_COLUMNS'
 ,p_attribute_01=>'N'
 ,p_attribute_02=>'HTML'
+);
+wwv_flow_api.create_page_button(
+ p_id=>wwv_flow_api.id(27458283624648106)
+,p_button_sequence=>60
+,p_button_plug_id=>wwv_flow_api.id(23052000792158838)
+,p_button_name=>'btn_agr_detalle'
+,p_button_action=>'DEFINED_BY_DA'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>wwv_flow_api.id(5297063796143931)
+,p_button_image_alt=>'Agregar Articulo'
+,p_button_position=>'BODY'
+,p_warn_on_unsaved_changes=>null
+,p_grid_new_row=>'Y'
+);
+wwv_flow_api.create_page_button(
+ p_id=>wwv_flow_api.id(27458667412648110)
+,p_button_sequence=>70
+,p_button_plug_id=>wwv_flow_api.id(23052000792158838)
+,p_button_name=>'btn_limpiar'
+,p_button_action=>'DEFINED_BY_DA'
+,p_button_template_options=>'#DEFAULT#'
+,p_button_template_id=>wwv_flow_api.id(5297063796143931)
+,p_button_image_alt=>'Nuevo Articulo'
+,p_button_position=>'BODY'
+,p_warn_on_unsaved_changes=>null
+,p_grid_new_row=>'N'
+,p_grid_new_column=>'Y'
 );
 wwv_flow_api.create_page_button(
  p_id=>wwv_flow_api.id(22718921756055304)
@@ -1017,18 +761,6 @@ wwv_flow_api.create_page_item(
 ,p_attribute_01=>'NONE'
 ,p_attribute_02=>'N'
 );
-wwv_flow_api.component_end;
-end;
-/
-begin
-wwv_flow_api.component_begin (
- p_version_yyyy_mm_dd=>'2020.03.31'
-,p_release=>'20.1.0.00.13'
-,p_default_workspace_id=>2200501847087933
-,p_default_application_id=>101
-,p_default_id_offset=>0
-,p_default_owner=>'CONTROL'
-);
 wwv_flow_api.create_page_item(
  p_id=>wwv_flow_api.id(22724826408055310)
 ,p_name=>'P42_COD_MONEDA'
@@ -1197,49 +929,63 @@ wwv_flow_api.create_page_item(
 ,p_item_template_options=>'#DEFAULT#'
 ,p_is_persistent=>'N'
 );
-wwv_flow_api.create_page_validation(
- p_id=>wwv_flow_api.id(22735583326055321)
-,p_tabular_form_region_id=>wwv_flow_api.id(30828443378212752)
-,p_validation_name=>'cant_mayor_cero'
-,p_validation_sequence=>10
-,p_validation=>'CANTIDAD'
-,p_validation_type=>'ITEM_NOT_ZERO'
-,p_error_message=>'#COLUMN_HEADER# debe ser mayor a cero.'
-,p_associated_column=>'CANTIDAD'
-,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
+wwv_flow_api.create_page_item(
+ p_id=>wwv_flow_api.id(23052189024158839)
+,p_name=>'P42_COD_ARTICULO'
+,p_item_sequence=>10
+,p_item_plug_id=>wwv_flow_api.id(23052000792158838)
+,p_prompt=>unistr('Art\00EDculo')
+,p_display_as=>'NATIVE_POPUP_LOV'
+,p_named_lov=>'LOV_ART_EXISTENCIAS'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'SELECT a.des_articulo as d,a.cod_articulo as r',
+'FROM vw_art_existencias a',
+'WHERE NVL(a.cantidad,0) > 0'))
+,p_cSize=>30
+,p_field_template=>wwv_flow_api.id(5295913207143921)
+,p_item_template_options=>'#DEFAULT#'
+,p_lov_display_extra=>'NO'
+,p_attribute_01=>'POPUP'
+,p_attribute_02=>'FIRST_ROWSET'
+,p_attribute_03=>'N'
+,p_attribute_04=>'N'
+,p_attribute_05=>'N'
 );
-wwv_flow_api.create_page_validation(
- p_id=>wwv_flow_api.id(22735944242055321)
-,p_tabular_form_region_id=>wwv_flow_api.id(30828443378212752)
-,p_validation_name=>'pre_mayor_cero'
-,p_validation_sequence=>20
-,p_validation=>'PRECIO'
-,p_validation_type=>'ITEM_NOT_ZERO'
-,p_error_message=>'#COLUMN_HEADER# debe ser mayor a cero.'
-,p_associated_column=>'PRECIO'
-,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
+wwv_flow_api.create_page_item(
+ p_id=>wwv_flow_api.id(23052205282158840)
+,p_name=>'P42_CANTIDAD'
+,p_item_sequence=>20
+,p_item_plug_id=>wwv_flow_api.id(23052000792158838)
+,p_prompt=>'Cantidad'
+,p_display_as=>'PLUGIN_SI_TRTS_AUTONUMERIC'
+,p_cSize=>30
+,p_begin_on_new_line=>'N'
+,p_field_template=>wwv_flow_api.id(5295913207143921)
+,p_item_template_options=>'#DEFAULT#'
 );
-wwv_flow_api.create_page_validation(
- p_id=>wwv_flow_api.id(22736393854055321)
-,p_tabular_form_region_id=>wwv_flow_api.id(30828443378212752)
-,p_validation_name=>'tot_mayor_cero'
-,p_validation_sequence=>30
-,p_validation=>'TOTAL'
-,p_validation_type=>'ITEM_NOT_ZERO'
-,p_error_message=>'#COLUMN_HEADER# debe ser mayor a cero.'
-,p_associated_column=>'TOTAL'
-,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
+wwv_flow_api.component_end;
+end;
+/
+begin
+wwv_flow_api.component_begin (
+ p_version_yyyy_mm_dd=>'2020.03.31'
+,p_release=>'20.1.0.00.13'
+,p_default_workspace_id=>2200501847087933
+,p_default_application_id=>101
+,p_default_id_offset=>0
+,p_default_owner=>'CONTROL'
 );
-wwv_flow_api.create_page_validation(
- p_id=>wwv_flow_api.id(22736736170055321)
-,p_tabular_form_region_id=>wwv_flow_api.id(30828443378212752)
-,p_validation_name=>'gra_mayor_cero'
-,p_validation_sequence=>40
-,p_validation=>'GRAVADA'
-,p_validation_type=>'ITEM_NOT_ZERO'
-,p_error_message=>'#COLUMN_HEADER# debe tener un valor.'
-,p_associated_column=>'GRAVADA'
-,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
+wwv_flow_api.create_page_item(
+ p_id=>wwv_flow_api.id(23052358244158841)
+,p_name=>'P42_PRECIO'
+,p_item_sequence=>30
+,p_item_plug_id=>wwv_flow_api.id(23052000792158838)
+,p_prompt=>'Precio'
+,p_display_as=>'PLUGIN_SI_TRTS_AUTONUMERIC'
+,p_cSize=>30
+,p_begin_on_new_line=>'N'
+,p_field_template=>wwv_flow_api.id(5295913207143921)
+,p_item_template_options=>'#DEFAULT#'
 );
 wwv_flow_api.create_page_da_event(
  p_id=>wwv_flow_api.id(22745909093055326)
@@ -1275,77 +1021,6 @@ wwv_flow_api.create_page_da_action(
 ,p_attribute_01=>'comprobarLineas();'
 );
 wwv_flow_api.create_page_da_event(
- p_id=>wwv_flow_api.id(22748609242055327)
-,p_name=>'ad_calcula_montos'
-,p_event_sequence=>50
-,p_triggering_element_type=>'COLUMN'
-,p_triggering_region_id=>wwv_flow_api.id(30828443378212752)
-,p_triggering_element=>'CANTIDAD,PRECIO'
-,p_bind_type=>'bind'
-,p_bind_event_type=>'change'
-);
-wwv_flow_api.create_page_da_action(
- p_id=>wwv_flow_api.id(22749667921055328)
-,p_event_id=>wwv_flow_api.id(22748609242055327)
-,p_event_result=>'TRUE'
-,p_action_sequence=>10
-,p_execute_on_page_init=>'N'
-,p_action=>'NATIVE_EXECUTE_PLSQL_CODE'
-,p_attribute_01=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'BEGIN',
-'    :gravada  := ROUND((REPLACE(NVL(:precio,0),''.'') * REPLACE(NVL(:cantidad,1),''.'')) / 1.1);',
-'    :iva      := ROUND((REPLACE(NVL(:precio,0),''.'') * REPLACE(NVL(:cantidad,1),''.'')) / 11);',
-'    :total    := REPLACE(NVL(:iva,0),''.'') + REPLACE(NVL(:gravada,0),''.'');',
-'EXCEPTION',
-'WHEN OTHERS THEN',
-'    :gravada  := 0;',
-'    :iva      := 0;',
-'    :total    := 0;',
-'END;'))
-,p_attribute_02=>'CANTIDAD,PRECIO'
-,p_attribute_03=>'GRAVADA,IVA,TOTAL'
-,p_attribute_04=>'N'
-,p_wait_for_result=>'Y'
-);
-wwv_flow_api.create_page_da_action(
- p_id=>wwv_flow_api.id(22749164708055327)
-,p_event_id=>wwv_flow_api.id(22748609242055327)
-,p_event_result=>'TRUE'
-,p_action_sequence=>20
-,p_execute_on_page_init=>'N'
-,p_action=>'NATIVE_JAVASCRIPT_CODE'
-,p_attribute_01=>'recalculaImporte();'
-);
-wwv_flow_api.create_page_da_event(
- p_id=>wwv_flow_api.id(22747762166055327)
-,p_name=>'ad_art_precio'
-,p_event_sequence=>60
-,p_triggering_element_type=>'COLUMN'
-,p_triggering_region_id=>wwv_flow_api.id(30828443378212752)
-,p_triggering_element=>'COD_ARTICULO'
-,p_bind_type=>'bind'
-,p_bind_event_type=>'change'
-);
-wwv_flow_api.create_page_da_action(
- p_id=>wwv_flow_api.id(22748284131055327)
-,p_event_id=>wwv_flow_api.id(22747762166055327)
-,p_event_result=>'TRUE'
-,p_action_sequence=>10
-,p_execute_on_page_init=>'N'
-,p_action=>'NATIVE_SET_VALUE'
-,p_affected_elements_type=>'COLUMN'
-,p_affected_elements=>'PRECIO'
-,p_attribute_01=>'SQL_STATEMENT'
-,p_attribute_03=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'SELECT NVL(a.pre_venta,0) precio',
-'FROM articulos a',
-'WHERE a.cod_articulo = :COD_ARTICULO;'))
-,p_attribute_07=>'COD_ARTICULO'
-,p_attribute_08=>'Y'
-,p_attribute_09=>'N'
-,p_wait_for_result=>'Y'
-);
-wwv_flow_api.create_page_da_event(
  p_id=>wwv_flow_api.id(22451486650798035)
 ,p_name=>'ad_dat_cliente'
 ,p_event_sequence=>70
@@ -1378,6 +1053,117 @@ wwv_flow_api.create_page_da_action(
 ,p_attribute_04=>'N'
 ,p_wait_for_result=>'Y'
 );
+wwv_flow_api.create_page_da_event(
+ p_id=>wwv_flow_api.id(23052695173158844)
+,p_name=>'ad_cal_import'
+,p_event_sequence=>90
+,p_triggering_element_type=>'ITEM'
+,p_triggering_element=>'P42_CANTIDAD,P42_PRECIO'
+,p_bind_type=>'bind'
+,p_bind_event_type=>'change'
+);
+wwv_flow_api.create_page_da_action(
+ p_id=>wwv_flow_api.id(23052795643158845)
+,p_event_id=>wwv_flow_api.id(23052695173158844)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'fn_add_act_collection();'
+);
+wwv_flow_api.create_page_da_action(
+ p_id=>wwv_flow_api.id(27460945873648133)
+,p_event_id=>wwv_flow_api.id(23052695173158844)
+,p_event_result=>'TRUE'
+,p_action_sequence=>30
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'fn_cal_tot_collection();'
+);
+wwv_flow_api.create_page_da_event(
+ p_id=>wwv_flow_api.id(27457725769648101)
+,p_name=>'nex_item_precio'
+,p_event_sequence=>110
+,p_triggering_element_type=>'ITEM'
+,p_triggering_element=>'P42_CANTIDAD'
+,p_triggering_condition_type=>'JAVASCRIPT_EXPRESSION'
+,p_triggering_expression=>'this.browserEvent.which === 13'
+,p_bind_type=>'bind'
+,p_bind_event_type=>'keypress'
+);
+wwv_flow_api.create_page_da_action(
+ p_id=>wwv_flow_api.id(27457859835648102)
+,p_event_id=>wwv_flow_api.id(27457725769648101)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_SET_FOCUS'
+,p_affected_elements_type=>'ITEM'
+,p_affected_elements=>'P42_PRECIO'
+);
+wwv_flow_api.create_page_da_event(
+ p_id=>wwv_flow_api.id(27458793469648111)
+,p_name=>'new_articulo'
+,p_event_sequence=>120
+,p_triggering_element_type=>'BUTTON'
+,p_triggering_button_id=>wwv_flow_api.id(27458667412648110)
+,p_bind_type=>'bind'
+,p_bind_event_type=>'click'
+);
+wwv_flow_api.create_page_da_action(
+ p_id=>wwv_flow_api.id(27458997061648113)
+,p_event_id=>wwv_flow_api.id(27458793469648111)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'fn_lim_col_articulos();'
+);
+wwv_flow_api.create_page_da_event(
+ p_id=>wwv_flow_api.id(27459396759648117)
+,p_name=>'nex_item_cantidad'
+,p_event_sequence=>130
+,p_triggering_element_type=>'ITEM'
+,p_triggering_element=>'P42_COD_ARTICULO'
+,p_bind_type=>'bind'
+,p_bind_event_type=>'select'
+);
+wwv_flow_api.create_page_da_action(
+ p_id=>wwv_flow_api.id(27459464010648118)
+,p_event_id=>wwv_flow_api.id(27459396759648117)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'fn_nav_articulo();'
+);
+wwv_flow_api.create_page_da_event(
+ p_id=>wwv_flow_api.id(27461725924648141)
+,p_name=>'ad_add_record'
+,p_event_sequence=>140
+,p_triggering_element_type=>'BUTTON'
+,p_triggering_button_id=>wwv_flow_api.id(27458283624648106)
+,p_bind_type=>'bind'
+,p_bind_event_type=>'click'
+);
+wwv_flow_api.create_page_da_action(
+ p_id=>wwv_flow_api.id(27461910203648143)
+,p_event_id=>wwv_flow_api.id(27461725924648141)
+,p_event_result=>'TRUE'
+,p_action_sequence=>20
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'fn_add_act_collection();'
+);
+wwv_flow_api.create_page_da_action(
+ p_id=>wwv_flow_api.id(27462033342648144)
+,p_event_id=>wwv_flow_api.id(27461725924648141)
+,p_event_result=>'TRUE'
+,p_action_sequence=>30
+,p_execute_on_page_init=>'N'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'fn_cal_tot_collection();'
+);
 wwv_flow_api.create_page_process(
  p_id=>wwv_flow_api.id(22745571852055326)
 ,p_process_sequence=>10
@@ -1400,49 +1186,7 @@ wwv_flow_api.create_page_process(
 ,p_attribute_06=>'Y'
 ,p_attribute_08=>'Y'
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
-);
-wwv_flow_api.create_page_process(
- p_id=>wwv_flow_api.id(22737036324055321)
-,p_process_sequence=>30
-,p_process_point=>'AFTER_SUBMIT'
-,p_region_id=>wwv_flow_api.id(30828443378212752)
-,p_process_type=>'NATIVE_IG_DML'
-,p_process_name=>unistr('Detalle Comprobante: Guardar Datos de Cuadr\00EDcula Interactiva')
-,p_attribute_01=>'PLSQL_CODE'
-,p_attribute_04=>wwv_flow_string.join(wwv_flow_t_varchar2(
-'BEGIN',
-' CASE :APEX$ROW_STATUS',
-' WHEN ''C'' THEN',
-'     INSERT INTO com_det_ventas(COD_COMPROBANTE,',
-'                                 COD_ARTICULO,',
-'                                 CANTIDAD,',
-'                                 PRECIO,',
-'                                 IVA,',
-'                                 GRAVADA,',
-'                                 TOTAL)',
-'     VALUES(:P42_COD_COMPROBANTE,',
-'            :COD_ARTICULO,',
-'            :CANTIDAD,',
-'            REPLACE(NVL(:PRECIO,0),''.''),',
-'            REPLACE(NVL(:IVA,0),''.''),',
-'            REPLACE(NVL(:GRAVADA,0),''.''),',
-'            REPLACE(NVL(:TOTAL,0),''.''));',
-' WHEN ''U'' THEN',
-'     UPDATE com_det_ventas',
-'     SET COD_ARTICULO = :COD_ARTICULO,',
-'         CANTIDAD = :CANTIDAD,',
-'         PRECIO = REPLACE(NVL(:PRECIO,0),''.''),',
-'         IVA = REPLACE(NVL(:IVA,0),''.''),',
-'         GRAVADA = REPLACE(NVL(:GRAVADA,0),''.''),',
-'         TOTAL = REPLACE(NVL(:TOTAL,0),''.'')',
-'     WHERE SECUENCIA = :SECUENCIA;',
-'  WHEN ''D'' THEN',
-'      DELETE FROM com_det_ventas WHERE SECUENCIA = :SECUENCIA;',
-'  END CASE;',
-'END;'))
-,p_attribute_05=>'Y'
-,p_attribute_06=>'Y'
-,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+,p_process_when_type=>'NEVER'
 );
 wwv_flow_api.create_page_process(
  p_id=>wwv_flow_api.id(22745208931055326)
@@ -1455,12 +1199,208 @@ wwv_flow_api.create_page_process(
 ,p_process_when_type=>'REQUEST_IN_CONDITION'
 );
 wwv_flow_api.create_page_process(
+ p_id=>wwv_flow_api.id(27458514477648109)
+,p_process_sequence=>50
+,p_process_point=>'AFTER_SUBMIT'
+,p_region_id=>wwv_flow_api.id(27133225802052303)
+,p_process_type=>'NATIVE_IG_DML'
+,p_process_name=>unistr('detalle_comprobante: Guardar Datos de Cuadr\00EDcula Interactiva')
+,p_attribute_01=>'REGION_SOURCE'
+,p_attribute_05=>'Y'
+,p_attribute_06=>'Y'
+,p_attribute_08=>'Y'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+);
+wwv_flow_api.create_page_process(
  p_id=>wwv_flow_api.id(22727668061055311)
 ,p_process_sequence=>10
 ,p_process_point=>'BEFORE_HEADER'
 ,p_region_id=>wwv_flow_api.id(31427187761203941)
 ,p_process_type=>'NATIVE_FORM_INIT'
 ,p_process_name=>'Inicializar pantalla Comprobante Compra'
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+);
+wwv_flow_api.create_page_process(
+ p_id=>wwv_flow_api.id(25906191983985020)
+,p_process_sequence=>20
+,p_process_point=>'BEFORE_HEADER'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'pr_crea_coleccion'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'begin',
+'  -- Call the procedure',
+'  pck_general_apex.pr_crear_colecciones(''TMP_COM_DET_VENTAS'');',
+'end;'))
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+);
+wwv_flow_api.create_page_process(
+ p_id=>wwv_flow_api.id(25906432583985023)
+,p_process_sequence=>10
+,p_process_point=>'ON_DEMAND'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'pr_add_act_coleccajax'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'DECLARE',
+'    v_seq           VARCHAR2(10);',
+'    v_cod_articulo  VARCHAR2(10);',
+'    v_exi_articulo  VARCHAR2(1);',
+'    v_cantidad      NUMBER(10);',
+'    v_precio        NUMBER(10);',
+'    v_iva           NUMBER(10);',
+'    v_gravada       NUMBER(10);',
+'    v_imp_total     NUMBER(10);',
+'    v_respuesta     BOOLEAN;',
+'BEGIN',
+'    v_cod_articulo := apex_application.g_x01;',
+'    v_cantidad     := apex_application.g_x02;',
+'    v_precio       := apex_application.g_x03;',
+'    v_respuesta     := FALSE;',
+'    BEGIN',
+'        SELECT ''S'',SEQ_ID',
+'        INTO  v_exi_articulo,v_seq ',
+'        FROM APEX_collections',
+'        WHERE collection_name = ''TMP_COM_DET_VENTAS''',
+'              AND c001 = v_cod_articulo',
+'              --AND ROWNUM = 1',
+'              ;',
+'    EXCEPTION',
+'        WHEN NO_DATA_FOUND THEN',
+'            v_exi_articulo := ''N'';',
+'            v_seq          := NULL;',
+'    END;',
+'    ',
+'    v_iva     := ROUND((NVL(v_precio,0) * NVL(v_cantidad,0) / 1.1));',
+'    v_gravada := ROUND(((NVL(v_precio,0) * NVL(v_cantidad,1)) / 11));',
+'    v_imp_total   := ROUND(ROUND((NVL(v_precio,0) * NVL(v_cantidad,0) / 1.1)) + ROUND(((NVL(v_precio,0) * NVL(v_cantidad,1)) / 11)));',
+'    ',
+'    IF v_exi_articulo = ''N'' AND v_cod_articulo IS NOT NULL AND NVL(v_imp_total,0) > 0 THEN',
+'        BEGIN',
+'            APEX_COLLECTION.ADD_MEMBER(p_collection_name => ''TMP_COM_DET_VENTAS'',',
+'                                       p_c001 => v_cod_articulo,',
+'                                       p_n001 => v_cantidad,',
+'                                       p_n002 => v_precio,',
+'                                       p_n003 => v_iva,',
+'                                       p_n004 => v_gravada,',
+'                                       p_n005 => v_imp_total',
+'                                      );',
+'        END;',
+'        v_respuesta := TRUE;',
+'    ELSIF v_exi_articulo = ''S'' AND v_cod_articulo IS NOT NULL AND NVL(v_imp_total,0) > 0 THEN',
+'        BEGIN',
+'            APEX_COLLECTION.UPDATE_MEMBER(p_collection_name => ''TMP_COM_DET_VENTAS'',',
+'                                          p_seq  => v_seq,',
+'                                          p_c001 => v_cod_articulo,',
+'                                          p_n001 => v_cantidad,',
+'                                          p_n002 => v_precio,',
+'                                          p_n003 => v_iva,',
+'                                          p_n004 => v_gravada,',
+'                                          p_n005 => v_imp_total',
+'                                         );',
+'        END;',
+'        v_respuesta := TRUE;',
+'    END IF;',
+'    apex_json.open_object;',
+'    apex_json.write(''success'', v_respuesta);',
+'    apex_json.close_object;',
+'EXCEPTION',
+'    WHEN OTHERS THEN',
+'        apex_json.open_object;',
+'        apex_json.write(''success'', false);',
+'        apex_json.write(''message'', sqlerrm);',
+'        apex_json.close_object; ',
+'END;',
+''))
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+);
+wwv_flow_api.create_page_process(
+ p_id=>wwv_flow_api.id(27460802692648132)
+,p_process_sequence=>20
+,p_process_point=>'ON_DEMAND'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'pr_cal_tot_coleccajax'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'DECLARE',
+'    v_total_iva     NUMBER(10);',
+'    v_total_gravada NUMBER(10);',
+'    v_total         NUMBER(10);',
+'BEGIN',
+'    v_total_iva     := 0;',
+'    v_total_gravada := 0;',
+'    v_total         := 0;',
+'    BEGIN',
+'        SELECT SUM(nvl(n003,0)),SUM(nvl(n004,0)),SUM(nvl(n005,0))',
+'        INTO  v_total_iva,v_total_gravada,v_total ',
+'        FROM APEX_collections',
+'        WHERE collection_name = ''TMP_COM_DET_VENTAS''',
+'              AND c001 IS NOT NULL;',
+'    EXCEPTION',
+'        WHEN NO_DATA_FOUND THEN',
+'            v_total_iva := 0;',
+'            v_total_gravada := 0;',
+'            v_total := 0;',
+'    END;',
+'    apex_json.open_object;',
+'    apex_json.write(''success'', true);',
+'    apex_json.write(''xtotal_iva'',v_total_iva);',
+'    apex_json.write(''xtotal_gravada'',v_total_gravada);',
+'    apex_json.write(''xtotal'',v_total);',
+'    apex_json.close_object;',
+'EXCEPTION',
+'    WHEN OTHERS THEN',
+'        apex_json.open_object;',
+'        apex_json.write(''success'', false);',
+'        apex_json.write(''message'', sqlerrm);',
+'        apex_json.close_object; ',
+'END;',
+''))
+,p_error_display_location=>'INLINE_IN_NOTIFICATION'
+);
+wwv_flow_api.create_page_process(
+ p_id=>wwv_flow_api.id(27461034267648134)
+,p_process_sequence=>30
+,p_process_point=>'ON_DEMAND'
+,p_process_type=>'NATIVE_PLSQL'
+,p_process_name=>'pr_del_rec_coleccajax'
+,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'DECLARE',
+'    v_seq           NUMBER(10);',
+'    v_exi_articulo  VARCHAR2(1);',
+'    v_respuesta     BOOLEAN;',
+'BEGIN',
+'    v_seq := apex_application.g_x01;',
+'    v_respuesta     := FALSE;',
+'    BEGIN',
+'        SELECT ''S''',
+'        INTO  v_exi_articulo ',
+'        FROM APEX_collections',
+'        WHERE collection_name = ''TMP_COM_DET_VENTAS''',
+'              AND seq_id = v_seq',
+'              --AND ROWNUM = 1',
+'              ;',
+'    EXCEPTION',
+'        WHEN NO_DATA_FOUND THEN',
+'            v_exi_articulo := ''N'';',
+'    END;',
+'    ',
+'    IF v_exi_articulo = ''S'' THEN',
+'        BEGIN',
+'            APEX_COLLECTION.DELETE_MEMBER(p_collection_name => ''TMP_COM_DET_VENTAS'',',
+'                                          p_seq  => v_seq',
+'                                         );',
+'        END;',
+'        v_respuesta := TRUE;',
+'    END IF;',
+'    apex_json.open_object;',
+'    apex_json.write(''success'', v_respuesta);',
+'    apex_json.close_object;',
+'EXCEPTION',
+'    WHEN OTHERS THEN',
+'        apex_json.open_object;',
+'        apex_json.write(''success'', false);',
+'        apex_json.write(''message'', sqlerrm);',
+'        apex_json.close_object; ',
+'END;',
+''))
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 );
 wwv_flow_api.component_end;

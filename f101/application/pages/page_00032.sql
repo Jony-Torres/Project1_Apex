@@ -25,7 +25,7 @@ wwv_flow_api.create_page(
 ,p_page_template_options=>'#DEFAULT#'
 ,p_protection_level=>'C'
 ,p_last_updated_by=>'JTORRES'
-,p_last_upd_yyyymmddhh24miss=>'20211214105913'
+,p_last_upd_yyyymmddhh24miss=>'20220105092013'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(9811326470140569)
@@ -304,7 +304,7 @@ wwv_flow_api.create_page_item(
 ,p_item_sequence=>80
 ,p_item_plug_id=>wwv_flow_api.id(9811326470140569)
 ,p_item_source_plug_id=>wwv_flow_api.id(9811326470140569)
-,p_prompt=>'Nuevo'
+,p_prompt=>'Grupo'
 ,p_source=>'COD_GRUPO'
 ,p_source_type=>'REGION_SOURCE_COLUMN'
 ,p_display_as=>'NATIVE_SELECT_LIST'

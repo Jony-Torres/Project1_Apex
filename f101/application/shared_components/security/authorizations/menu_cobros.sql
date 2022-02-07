@@ -1,7 +1,7 @@
-prompt --application/shared_components/security/authorizations/menu_inicio
+prompt --application/shared_components/security/authorizations/menu_cobros
 begin
 --   Manifest
---     SECURITY SCHEME: MENU INICIO
+--     SECURITY SCHEME: MENU COBROS
 --   Manifest End
 wwv_flow_api.component_begin (
  p_version_yyyy_mm_dd=>'2020.03.31'
@@ -12,8 +12,8 @@ wwv_flow_api.component_begin (
 ,p_default_owner=>'CONTROL'
 );
 wwv_flow_api.create_security_scheme(
- p_id=>wwv_flow_api.id(25913733770075583)
-,p_name=>'MENU INICIO'
+ p_id=>wwv_flow_api.id(26831767450560592)
+,p_name=>'MENU COBROS'
 ,p_scheme_type=>'NATIVE_FUNCTION_BODY'
 ,p_attribute_01=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'declare',
@@ -25,7 +25,7 @@ wwv_flow_api.create_security_scheme(
 '      select per_acceso into Vallow from acc_det_grupos ',
 '      where cod_seg_tipo = ''MENU'' and cod_segmento =(select cod_segmento ',
 '                                                     from acc_segmentos ',
-'                                                     where des_segmento = ''M_INICIO'' ',
+'                                                     where des_segmento = ''M_COBROS'' ',
 '                                                           and cod_seg_tipo = ''MENU'') ',
 '                                                           and cod_grupo =(select cod_grupo ',
 '                                                                           from funcionarios ',
@@ -41,7 +41,7 @@ wwv_flow_api.create_security_scheme(
 'exception',
 '   when NO_DATA_FOUND then return false;',
 'end;'))
-,p_error_message=>unistr('El esquema de autorizaci\00F3n del Men\00FA Inicio, fue violado.')
+,p_error_message=>unistr('El esquema de autorizaci\00F3n del Men\00FA de Cobros, fue violado.')
 ,p_caching=>'BY_USER_BY_SESSION'
 );
 wwv_flow_api.component_end;

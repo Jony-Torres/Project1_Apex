@@ -20,7 +20,7 @@ wwv_flow_api.create_page(
 ,p_autocomplete_on_off=>'OFF'
 ,p_page_template_options=>'#DEFAULT#'
 ,p_last_updated_by=>'JTORRES'
-,p_last_upd_yyyymmddhh24miss=>'20211122084352'
+,p_last_upd_yyyymmddhh24miss=>'20220105092430'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(23707652335228820)
@@ -61,7 +61,7 @@ wwv_flow_api.create_page_plug(
 '      AND SC.COD_SUCURSAL = S.COD_SUCURSAL',
 '      AND SC.COD_CLIENTE = C.COD_CLIENTE',
 '      AND C.COD_PERSONA = P.COD_PERSONA',
-'ORDER BY 1'))
+'ORDER BY 1,3'))
 ,p_plug_source_type=>'NATIVE_IR'
 ,p_plug_query_options=>'DERIVED_REPORT_COLUMNS'
 ,p_prn_page_header=>'Saldo Clientes'

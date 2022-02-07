@@ -22,10 +22,10 @@ wwv_flow_api.create_page(
 ,p_group_id=>wwv_flow_api.id(5322694370144102)
 ,p_javascript_code=>'var htmldb_delete_message=''"DELETE_CONFIRM_MSG"'';'
 ,p_step_template=>wwv_flow_api.id(20701244474036853)
-,p_page_template_options=>'#DEFAULT#'
+,p_page_template_options=>'#DEFAULT#:ui-dialog--stretch'
 ,p_protection_level=>'C'
 ,p_last_updated_by=>'JTORRES'
-,p_last_upd_yyyymmddhh24miss=>'20211214111209'
+,p_last_upd_yyyymmddhh24miss=>'20220105091801'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(6506108394194602)
